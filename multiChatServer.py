@@ -3,12 +3,14 @@
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 
+import ux_utils
+
 clients = {}
 addresses = {}
 
-HOST = "127.0.0.1"
-PORT = 5000
-BUFSIZ = 1024
+HOST = ux_utils.read_until_parsed_successfully("HOST: ", lambda ip: ip if ux_utils.is_ip(ip) else None)
+PORT = ux_utils.read_until_parsed_successfully("PORT: ", int)
+BUFSIZ = ux_utils.read_until_parsed_successfully("BUFSIZE: ", int)
 ADDR = (HOST, PORT)
 SOCK = socket(AF_INET, SOCK_STREAM)
 SOCK.bind(ADDR)
@@ -18,7 +20,7 @@ def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
         client, client_address = SOCK.accept()
-        print("%s:%s has connected." % client_address)
+        print(f"{client_address}:{client_address} has connected.")
         client.send("Greetings from the ChatRoom! ".encode("utf8"))
         client.send("Now type your name and press enter!".encode("utf8"))
         addresses[client] = client_address
@@ -28,9 +30,9 @@ def accept_incoming_connections():
 def handle_client(conn, addr):  # Takes client socket as argument.
     """Handles a single client connection."""
     name = conn.recv(BUFSIZ).decode("utf8")
-    welcome = 'Welcome %s! If you ever want to quit, type #quit to exit.' % name
+    welcome = f'Welcome {name}! If you ever want to quit, type #quit to exit.'
     conn.send(bytes(welcome, "utf8"))
-    msg = "%s from [%s] has joined the chat!" % (name, "{}:{}".format(addr[0], addr[1]))
+    msg = f"{name} from [{f'{addr[0]}:{addr[1]}'}] has joined the chat!"
     broadcast(bytes(msg, "utf8"))
     clients[conn] = name
     while True:
@@ -41,7 +43,7 @@ def handle_client(conn, addr):  # Takes client socket as argument.
             conn.send(bytes("#quit", "utf8"))
             conn.close()
             del clients[conn]
-            broadcast(bytes("%s has left the chat." % name, "utf8"))
+            broadcast(bytes(f"{name} has left the chat.", "utf8"))
             break
 
 
